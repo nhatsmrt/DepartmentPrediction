@@ -1,0 +1,21 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r include = FALSE}
+library(igraph)
+library(dplyr)
+```
+
+
+```{r}
+df_edges_list = read.csv("./Data/edges_list.csv")
+df_labels = read.csv("./Data/department_labels.csv")
+graph = graph_from_data_frame(df_edges_list, directed = TRUE)
+```
+
+```{r}
+print(gorder(graph))
+print(gsize(graph))
+```
+
