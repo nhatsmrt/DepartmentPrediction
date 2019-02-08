@@ -1,21 +1,64 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_notebook: default
+  html_document: default
 ---
 ```{r include = FALSE}
+## https://www.r-graph-gallery.com/248-igraph-plotting-parameters/
 library(igraph)
 library(dplyr)
 ```
 
 
 ```{r}
-df_edges_list = read.csv("./Data/edges_list.csv")
-df_labels = read.csv("./Data/department_labels.csv")
-graph = graph_from_data_frame(df_edges_list, directed = TRUE)
+df_edges_list <- read.csv("./Data/edges_list.csv")
+df_labels <- read.csv("./Data/department_labels.csv")
+graph <- graph_from_data_frame(df_edges_list, directed = TRUE)
+graph <- graph %>%  set_vertex_attr("department", value = df_labels %>% select("department_id") %>% pull())
+
+graph_simplified <- graph %>% simplify()
 ```
 
 ```{r}
-print(gorder(graph))
-print(gsize(graph))
+isolated <- which(degree(graph_simplified) == 0)
+graph_simplified <- delete.vertices(graph_simplified, isolated)
 ```
+
+
+```{r}
+sampled_nodes <- sample(V(graph_simplified), 100, replace=F)
+subgraph <- induced_subgraph(graph_simplified, sampled_nodes)
+```
+
+
+```{r fig.width=2, fig.height=2}
+plot(
+  subgraph,
+  vertex.label = NA,
+  layout = layout.auto(subgraph),
+  vertex.size = 3, edge.arrow.size = 0.01,
+  vertex.color = vertex_attr(subgraph, 'department')
+)
+```
+
+Now let us look at some statistics of the graphs:
+<br>
+1. Diameter of the graph: `r diameter(graph)`
+<br>
+2. Maximum degree: `r max(degree(graph, mode = "all"))`. Maximum out-degree: `r max(degree(graph, mode = "out"))`. Maximum in-degree: `r max(degree(graph, mode = "in"))`
+<br>
+3. Average path length of the graph: `r mean_distance(graph)`
+<br>
+4. Density of graph: `r edge_density(graph)`
+<br>
+5. Global transitivity of the graph: `r transitivity(graph)`
+<br>
+We can also compute some statistics of the nodes:
+
+```{r}
+between_centrality <- betweenness(graph, V(graph), normalized = TRUE)
+```
+
+
 
