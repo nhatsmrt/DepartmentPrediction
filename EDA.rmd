@@ -44,16 +44,30 @@ plot(
 
 Now let us look at some statistics of the graphs:
 <br>
-1. Diameter of the graph: `r diameter(graph)`
+1. *Diameter of the graph*: `r diameter(graph)`
 <br>
-2. Maximum degree: `r max(degree(graph, mode = "all"))`. Maximum out-degree: `r max(degree(graph, mode = "out"))`. Maximum in-degree: `r max(degree(graph, mode = "in"))`
+2. *Maximum degree*: `r max(degree(graph, mode = "all"))`. Maximum out-degree: `r max(degree(graph, mode = "out"))`. Maximum in-degree: `r max(degree(graph, mode = "in"))`
 <br>
-3. Average path length of the graph: `r mean_distance(graph)`
+3. *Average path length of the graph*: `r mean_distance(graph, directed = TRUE)`
 <br>
-4. Density of graph: `r edge_density(graph)`
+4. *Density of graph*: `r edge_density(graph)`
 <br>
-5. Global transitivity of the graph: `r transitivity(graph)`
+5. *Global transitivity of the graph*: `r transitivity(graph)`
 <br>
+Now, let us compare this statistics with that of random graphs with similar number of edges (and density). For instance, let us generate a thousand of such graphs and draw the histogram of their average path lengths:
+```{r}
+gl <- vector('list', 1000)
+for (i in 1:1000) {
+  gl[[i]] <- erdos.renyi.game(n = gorder(graph), p.or.m = edge_density(graph), type = "gnp")
+}
+
+gl_apls <- unlist(lapply(gl, mean_distance, directed = TRUE))
+
+hist(gl_apls, xlim = range(c(2.45, 2.70)))
+abline(v = mean_distance(graph, directed = TRUE), col = "red", lty = 3, lwd = 2)
+```
+
+As we can see, the average path length of the graph is relatively higher than graphs with similar number of edges and density.
 We can also compute some statistics of the nodes:
 
 ```{r}
