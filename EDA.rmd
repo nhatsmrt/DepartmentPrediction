@@ -1,5 +1,6 @@
 ---
-title: "R Notebook"
+title: "Exploring Data"
+author: "Nhat Pham"
 output:
   html_notebook: default
   html_document: default
@@ -25,6 +26,8 @@ isolated <- which(degree(graph_simplified) == 0)
 graph_simplified <- delete.vertices(graph_simplified, isolated)
 ```
 
+## Visualization
+As the graph is too big, we will be content with visualizing a random subgraph of it:
 
 ```{r}
 sampled_nodes <- sample(V(graph_simplified), 100, replace=F)
@@ -42,6 +45,8 @@ plot(
 )
 ```
 
+
+## Graph Statistics
 Now let us look at some statistics of the graphs:
 <br>
 1. *Diameter of the graph*: `r diameter(graph)`
@@ -54,6 +59,10 @@ Now let us look at some statistics of the graphs:
 <br>
 5. *Global transitivity of the graph*: `r transitivity(graph)`
 <br>
+6. *Reciprocity* (percentage of edges that are symmetrical): `r reciprocity(graph)`
+<br>
+The high reciprocity suggests that most correspondents are two ways: if a research sends an email to another, it is very likely that he/she will receive a reply.
+<br>
 Now, let us compare this statistics with that of random graphs with similar number of edges (and density). For instance, let us generate a thousand of such graphs and draw the histogram of their average path lengths:
 ```{r}
 gl <- vector('list', 1000)
@@ -63,7 +72,13 @@ for (i in 1:1000) {
 
 gl_apls <- unlist(lapply(gl, mean_distance, directed = TRUE))
 
-hist(gl_apls, xlim = range(c(2.45, 2.70)))
+hist(
+  gl_apls,
+  xlim = range(c(2.45, 2.70)),
+  main = "Histogram of Average Path Lengths",
+  xlab = "Average Path Lengths",
+  col = "blue"
+)
 abline(v = mean_distance(graph, directed = TRUE), col = "red", lty = 3, lwd = 2)
 ```
 
@@ -73,6 +88,53 @@ We can also compute some statistics of the nodes:
 ```{r}
 between_centrality <- betweenness(graph, V(graph), normalized = TRUE)
 ```
+## Community Detection (Unsupervised)
 
+Here, we will apply some built-in unsupervised community detection methods provided by the igraph package.
+### Fast-Greedy
+The first one we will examine is the fast-greedy method:
+```{r}
+community_fg <- fastgreedy.community(as.undirected(graph))
+```
+Some statistics of the result:
+<br>
+1. Number of communities: `r length(community_fg)`
+<br>
+2. Sizes of the communities: `r sizes(community_fg)`
+<br>
+If we look at the breakdown of the values:
+```{r}
+table(sizes(community_fg))
+```
+We can see that the majority of the communities only have 1 members (i.e isolated). Some larger communities have up too more than 300 members!
+<br>
+The membership of each vertex can be found via:
+```{r}
+membership_fg <- membership(community_fg)
+```
+
+### Edge-Betweenness:
+Now let us apply the edge-betweenness method:
+```{r}
+community_le <- leading.eigenvector.community(as.undirected(graph))
+```
+Some statistics of the result:
+<br>
+1. Number of communities: `r length(community_le)`
+<br>
+2. Sizes of the communities: `r sizes(community_le)`
+<br>
+Again, looking at the breakdown of the values:
+```{r}
+table(sizes(community_le))
+```
+We see that the number of isolated communities have decreased, and the larger communities are also less extreme.
+<br>
+This seems like a more plausible representation of the true community structure.
+<br>
+The membership of each vertex can be found via:
+```{r}
+membership_le <- membership(community_le)
+```
 
 
