@@ -5,14 +5,18 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
 
 np.random.seed(0)
 
 df = pd.read_csv("./Data/features.csv").fillna(0)
 department = df[["department"]].values.reshape(-1)
-
 features = df.drop("name", axis = 1).drop("department", axis = 1).values
-pca = PCA(n_components = 5)
+
+scaler = StandardScaler()
+features = scaler.fit_transform(features)
+
+pca = PCA()
 features_pca = pca.fit_transform(features)
 
 
