@@ -113,6 +113,9 @@ The membership of each vertex can be found via:
 ```{r}
 membership_fg <- membership(community_fg)
 ```
+```{r}
+plot(community_fg, graph)
+```
 
 ### Edge-Betweenness:
 Now let us apply the edge-betweenness method:
@@ -160,12 +163,32 @@ V(graph)$betweenness <- betweenness(graph, directed = TRUE)
 V(graph)$eigenCentrality <- eigen_centrality(graph, directed = TRUE, scale = TRUE)$vector
 V(graph)$closeness <- closeness(graph)
 ```
+### Link-Based Features:
+```{r}
+adj_mat <- as_adjacency_matrix(graph)
+second_ord_adj_mat <- adj_mat %*% adj_mat
+second_ord_adj_mat <- (second_ord_adj_mat > 0) + 0
+diag(second_ord_adj_mat) <- 0
+
+V(graph)$avgDeg <- as.vector(adj_mat %*% V(graph)$degree) / V(graph)$degree
+V(graph)$avgTriag <- as.vector(adj_mat %*% V(graph)$triangles) / V(graph)$degree
+V(graph)$avgTransit <- as.vector(adj_mat %*% V(graph)$local_transitivity) / V(graph)$degree
+V(graph)$avgBetween <- as.vector(adj_mat %*% V(graph)$betweenness) / V(graph)$degree
+
+
+V(graph)$pr <- page.rank(graph)$vector
+for (i in 0:41) {
+  graph <- set_vertex_attr(graph, paste0("perpr_", i), value = page.rank(graph, personalized = V(graph)$department == i)$vector)
+}
+
+
+```
+
 
 ### Export the Features into a DataFrame:
 Finally, we can export the features into a dataframe to use in predictive analysis:
 ```{r}
-df_features <- igraph::as_data_frame(graph, what = "vertices") %>% 
-  select(-component)
+df_features <- igraph::as_data_frame(graph, what = "vertices")
 write.csv(df_features, "./Data/features.csv")
 ```
 
