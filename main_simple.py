@@ -6,6 +6,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import KFold
 
 np.random.seed(0)
 
@@ -26,7 +28,22 @@ features_train, features_test, department_train, department_test = train_test_sp
     train_size = 0.8
 )
 
-model = SVC()
+## Use k-Fold CV to select model:
+kf = KFold()
+models = [LogisticRegression(), SVC(), RandomForestClassifier()]
+accs = []
+for model in models:
+    model_acc = []
+    for train_idx, test_idx in kf.split(features_train):
+        model.fit(features_train[train_idx], department_train[train_idx])
+        model_acc.append(accuracy_score(department_train[test_idx], model.predict(features_train[test_idx])))
+
+    accs.append(np.mean(model_acc))
+
+print(accs)
+
+## Selecting the best model (here, it is LogisticRegression!)
+model = models[np.argmax(accs)]
 model.fit(features_train, department_train)
 
 pred = model.predict(features_test)
