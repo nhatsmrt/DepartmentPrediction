@@ -5,12 +5,13 @@ output:
   html_notebook: default
   html_document: default
 ---
-```{r include = FALSE}
+```{r, include = FALSE}
 ## https://www.r-graph-gallery.com/248-igraph-plotting-parameters/
 library(igraph)
 library(dplyr)
 ```
 
+## Introduction and Simple Processing
 
 ```{r}
 df_edges_list <- read.csv("./Data/edges_list.csv")
@@ -18,10 +19,10 @@ df_labels <- read.csv("./Data/department_labels.csv")
 graph <- graph_from_data_frame(df_edges_list, directed = TRUE)
 graph <- graph %>%  set_vertex_attr("department", value = df_labels %>% select("department_id") %>% pull())
 
-graph_simplified <- graph %>% simplify()
 ```
 
 ```{r}
+graph_simplified <- graph %>% simplify()
 isolated <- which(degree(graph_simplified) == 0)
 graph_simplified <- delete.vertices(graph_simplified, isolated)
 ```
@@ -137,4 +138,34 @@ The membership of each vertex can be found via:
 membership_le <- membership(community_le)
 ```
 
+## Graphlet
+
+## Homophily Analysis
+
+## Extracting Vertices Feature
+Now let us extract the features of the vertices.
+### Simple Features:
+We will extract the degree (first and second order) of each vertex, along with the number of triangles it belongs to:
+```{r}
+V(graph)$degree <- degree(graph)
+V(graph)$degreeSecond <- neighborhood.size(graph, 2) / length(V(graph) - 1)
+V(graph)$triangles <- count_triangles(graph)
+V(graph)$local_transitivity <- transitivity(graph, type = "local", isolates = "zero")
+```
+
+### Centrality Features:
+The next set of features are the centrality measures of each node:
+```{r}
+V(graph)$betweenness <- betweenness(graph, directed = TRUE)
+V(graph)$eigenCentrality <- eigen_centrality(graph, directed = TRUE, scale = TRUE)$vector
+V(graph)$closeness <- closeness(graph)
+```
+
+### Export the Features into a DataFrame:
+Finally, we can export the features into a dataframe to use in predictive analysis:
+```{r}
+df_features <- igraph::as_data_frame(graph, what = "vertices") %>% 
+  select(-component)
+write.csv(df_features, "./Data/features.csv")
+```
 
