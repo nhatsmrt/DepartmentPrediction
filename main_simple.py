@@ -9,19 +9,23 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold
 
-np.random.seed(0)
+np.random.seed(22)
 
-df = pd.read_csv("./Data/features.csv").fillna(0)
-department = df[["department"]].values.reshape(-1)
-features = df.drop("name", axis = 1).drop("department", axis = 1).values
+df_train = pd.read_csv("./Data/train.csv").fillna(0)
+df_test = pd.read_csv("./Data/test.csv").fillna(0)
+
+department_train = df_train[["true_department"]].values.reshape(-1)
+features_train = df_train.drop(["name", "department", "true_department",  "membership_lv", "membership_rw", "membership_le"], axis = 1).values
+department_test = df_test[["true_department"]].values.reshape(-1)
+features_test = df_test.drop(["name", "department", "true_department", "membership_lv", "membership_le", "membership_rw"], axis = 1).values
 
 
 
-features_train, features_test, department_train, department_test = train_test_split(
-    features,
-    department,
-    train_size = 0.8
-)
+# features_train, features_test, department_train, department_test = train_test_split(
+#     features,
+#     department,
+#     train_size = 0.8
+# )
 
 
 scaler = StandardScaler()

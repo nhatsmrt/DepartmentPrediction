@@ -2,8 +2,8 @@
 title: "Exploring Data"
 author: "Nhat Pham"
 output:
-  html_notebook: default
   html_document: default
+  html_notebook: default
 ---
 ```{r, include = FALSE}
 ## https://www.r-graph-gallery.com/248-igraph-plotting-parameters/
@@ -16,8 +16,14 @@ library(dplyr)
 ```{r}
 df_edges_list <- read.csv("./Data/edges_list.csv")
 df_labels <- read.csv("./Data/department_labels.csv")
+
 graph <- graph_from_data_frame(df_edges_list, directed = TRUE)
+graph <- graph %>%  set_vertex_attr("true_department", value = df_labels %>% select("department_id") %>% pull())
+
+test_idx <- sample(df_labels$id, 0.2 * nrow(df_labels))
+df_labels[test_idx, "department_id"] <- -1
 graph <- graph %>%  set_vertex_attr("department", value = df_labels %>% select("department_id") %>% pull())
+
 
 ```
 
@@ -112,15 +118,21 @@ We can see that the majority of the communities only have 1 members (i.e isolate
 The membership of each vertex can be found via:
 ```{r}
 membership_fg <- membership(community_fg)
-```
-```{r}
-plot(community_fg, graph)
+V(graph)$membership_fg <- membership_fg
 ```
 
-### Edge-Betweenness:
+```{r}
+plot(community_fg, graph, vertex.label = NA,
+  vertex.size = 3, edge.arrow.size = 0.01,
+  vertex.color = vertex_attr(subgraph, 'department')
+)
+```
+
+### Leading Eigenvector:
 Now let us apply the edge-betweenness method:
 ```{r}
 community_le <- leading.eigenvector.community(as.undirected(graph))
+V(graph)$membership_le <- membership(community_le)
 ```
 Some statistics of the result:
 <br>
@@ -135,11 +147,15 @@ table(sizes(community_le))
 We see that the number of isolated communities have decreased, and the larger communities are also less extreme.
 <br>
 This seems like a more plausible representation of the true community structure.
-<br>
-The membership of each vertex can be found via:
+
+### Random Walks:
 ```{r}
-membership_le <- membership(community_le)
+community_lv <- cluster_louvain(as.undirected(graph))
+membership_lv <- membership(community_lv)
+length(community_lv)
+V(graph)$membership_lv <- membership(community_lv)
 ```
+
 
 ## Graphlet
 
@@ -176,10 +192,34 @@ V(graph)$avgTransit <- as.vector(adj_mat %*% V(graph)$local_transitivity) / V(gr
 V(graph)$avgBetween <- as.vector(adj_mat %*% V(graph)$betweenness) / V(graph)$degree
 
 
+
+
 V(graph)$pr <- page.rank(graph)$vector
 for (i in 0:41) {
   graph <- set_vertex_attr(graph, paste0("perpr_", i), value = page.rank(graph, personalized = V(graph)$department == i)$vector)
 }
+
+for (i in 1:45) {
+  graph <- set_vertex_attr(graph, paste0("perpr_fg", i), value = page.rank(graph, personalized = V(graph)$membership_fg == i)$vector)
+}
+
+
+for (i in 1:32) {
+  graph <- set_vertex_attr(graph, paste0("perpr_le", i), value = page.rank(graph, personalized = V(graph)$membership_le == i)$vector)
+}
+
+for (i in 1:136) {
+  graph <- set_vertex_attr(graph, paste0("perpr_wt", i), value = page.rank(graph, personalized = V(graph)$membership_wt == i)$vector)
+}
+
+
+for (i in 1:26) {
+  graph <- set_vertex_attr(graph, paste0("perpr_lv", i), value = page.rank(graph, personalized = V(graph)$membership_lv == i)$vector)
+}
+
+
+
+
 
 
 ```
@@ -189,6 +229,11 @@ for (i in 0:41) {
 Finally, we can export the features into a dataframe to use in predictive analysis:
 ```{r}
 df_features <- igraph::as_data_frame(graph, what = "vertices")
-write.csv(df_features, "./Data/features.csv")
+df_features_train <- df_features %>% filter(department != -1)
+df_features_test <- df_features %>% filter(department == -1)
+
+write.csv(df_features_train, "./Data/train.csv")
+write.csv(df_features_test, "./Data/test.csv")
+
 ```
 
