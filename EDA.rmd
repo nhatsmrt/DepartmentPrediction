@@ -24,13 +24,12 @@ test_idx <- sample(df_labels$id, 0.2 * nrow(df_labels))
 df_labels[test_idx, "department_id"] <- -1
 graph <- graph %>%  set_vertex_attr("department", value = df_labels %>% select("department_id") %>% pull())
 
-
 ```
 
 ```{r}
-graph_simplified <- graph %>% simplify()
-isolated <- which(degree(graph_simplified) == 0)
-graph_simplified <- delete.vertices(graph_simplified, isolated)
+graph <- graph %>% simplify()
+isolated <- which(degree(graph) == 0)
+graph_simplified <- delete.vertices(graph, isolated)
 ```
 
 ## Visualization
@@ -148,7 +147,15 @@ We see that the number of isolated communities have decreased, and the larger co
 <br>
 This seems like a more plausible representation of the true community structure.
 
-### Random Walks:
+### Random Walk:
+```{r}
+community_rw <- cluster_walktrap(graph)
+V(graph)$membership_rw <- membership(community_rw)
+```
+
+
+
+### Louvain Algorithm:
 ```{r}
 community_lv <- cluster_louvain(as.undirected(graph))
 membership_lv <- membership(community_lv)
@@ -209,7 +216,7 @@ for (i in 1:32) {
 }
 
 for (i in 1:136) {
-  graph <- set_vertex_attr(graph, paste0("perpr_wt", i), value = page.rank(graph, personalized = V(graph)$membership_wt == i)$vector)
+  graph <- set_vertex_attr(graph, paste0("perpr_rw", i), value = page.rank(graph, personalized = V(graph)$membership_rw == i)$vector)
 }
 
 
@@ -232,8 +239,9 @@ df_features <- igraph::as_data_frame(graph, what = "vertices")
 df_features_train <- df_features %>% filter(department != -1)
 df_features_test <- df_features %>% filter(department == -1)
 
-write.csv(df_features_train, "./Data/train.csv")
-write.csv(df_features_test, "./Data/test.csv")
+
+write.csv(df_features_train, "./Data/train.csv", row.names=FALSE)
+write.csv(df_features_test, "./Data/test.csv", row.names=FALSE)
 
 ```
 

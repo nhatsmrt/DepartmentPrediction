@@ -1,13 +1,15 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold
+from sklearn.compose import ColumnTransformer
+from sklearn.neural_network import MLPClassifier
+
 
 np.random.seed(22)
 
@@ -15,18 +17,25 @@ df_train = pd.read_csv("./Data/train.csv").fillna(0)
 df_test = pd.read_csv("./Data/test.csv").fillna(0)
 
 department_train = df_train[["true_department"]].values.reshape(-1)
-features_train = df_train.drop(["name", "department", "true_department",  "membership_lv", "membership_rw", "membership_le"], axis = 1).values
+features_train = df_train.drop(["name", "department", "true_department"], axis = 1).values
 department_test = df_test[["true_department"]].values.reshape(-1)
-features_test = df_test.drop(["name", "department", "true_department", "membership_lv", "membership_le", "membership_rw"], axis = 1).values
+features_test = df_test.drop(["name", "department", "true_department"], axis = 1).values
+
+features_train[:, :4] = features_train[:, :4] - 1
+features_test[:, :4] = features_test[:, :4] - 1
 
 
+transformer = ColumnTransformer(
+    [
+        ("oh_0", OneHotEncoder(categories = [range(45)]), [0]),
+        ("oh_1", OneHotEncoder(categories = [range(32)]), [1]),
+        ("oh_2", OneHotEncoder(categories = [range(136)]), [2]),
+        ("oh_3", OneHotEncoder(categories = [range(26)]), [3]),
 
-# features_train, features_test, department_train, department_test = train_test_split(
-#     features,
-#     department,
-#     train_size = 0.8
-# )
-
+    ]
+)
+features_train = transformer.fit_transform(features_train).toarray()
+features_test = transformer.transform(features_test).toarray()
 
 scaler = StandardScaler()
 features_train = scaler.fit_transform(features_train)
@@ -38,9 +47,10 @@ features_train_pca = pca.fit_transform(features_train)
 features_test_pca = pca.transform(features_test)
 
 
+
 ## Use k-Fold CV to select model:
-kf = KFold()
-models = [LogisticRegression(), SVC(), RandomForestClassifier()]
+kf = KFold(n_splits=10)
+models = [LogisticRegression(C = 0.5), SVC(C = 0.5), RandomForestClassifier(), MLPClassifier(max_iter=2000)]
 accs = []
 for model in models:
     model_acc = []
