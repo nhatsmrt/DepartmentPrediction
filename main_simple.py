@@ -15,18 +15,24 @@ df = pd.read_csv("./Data/features.csv").fillna(0)
 department = df[["department"]].values.reshape(-1)
 features = df.drop("name", axis = 1).drop("department", axis = 1).values
 
-scaler = StandardScaler()
-features = scaler.fit_transform(features)
-
-pca = PCA()
-features_pca = pca.fit_transform(features)
 
 
 features_train, features_test, department_train, department_test = train_test_split(
-    features_pca,
+    features,
     department,
     train_size = 0.8
 )
+
+
+scaler = StandardScaler()
+features_train = scaler.fit_transform(features_train)
+features_test = scaler.transform(features_test)
+
+
+pca = PCA()
+features_train_pca = pca.fit_transform(features_train)
+features_test_pca = pca.transform(features_test)
+
 
 ## Use k-Fold CV to select model:
 kf = KFold()
@@ -44,8 +50,8 @@ print(accs)
 
 ## Selecting the best model (here, it is LogisticRegression!)
 model = models[np.argmax(accs)]
-model.fit(features_train, department_train)
+model.fit(features_train_pca, department_train)
 
-pred = model.predict(features_test)
+pred = model.predict(features_test_pca)
 print(accuracy_score(department_test, pred))
 
