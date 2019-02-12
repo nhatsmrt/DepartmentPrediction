@@ -41,8 +41,8 @@ accs = []
 for model in models:
     model_acc = []
     for train_idx, test_idx in kf.split(features_train):
-        model.fit(features_train[train_idx], department_train[train_idx])
-        model_acc.append(accuracy_score(department_train[test_idx], model.predict(features_train[test_idx])))
+        model.fit(features_train_pca[train_idx], department_train[train_idx])
+        model_acc.append(accuracy_score(department_train[test_idx], model.predict(features_train_pca[test_idx])))
 
     accs.append(np.mean(model_acc))
 
