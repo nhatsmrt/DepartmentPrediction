@@ -2,13 +2,14 @@
 title: "Exploring Data"
 author: "Nhat Pham"
 output:
-  html_document: default
   html_notebook: default
+  html_document: default
 ---
 ```{r, include = FALSE}
 ## https://www.r-graph-gallery.com/248-igraph-plotting-parameters/
 library(igraph)
 library(dplyr)
+library(HiveR)
 ```
 
 ## Introduction and Simple Processing
@@ -16,13 +17,19 @@ library(dplyr)
 ```{r}
 df_edges_list <- read.csv("./Data/edges_list.csv")
 df_labels <- read.csv("./Data/department_labels.csv")
+df_edges_list <- df_edges_list + 1
+df_labels <- df_labels + 1
 
 graph <- graph_from_data_frame(df_edges_list, directed = TRUE)
-graph <- graph %>%  set_vertex_attr("true_department", value = df_labels %>% select("department_id") %>% pull())
+V(graph)[df_labels %>% select("id") %>% pull()]$true_department <- df_labels %>% 
+  select("department_id") %>% 
+  pull()
 
 test_idx <- sample(df_labels$id, 0.2 * nrow(df_labels))
 df_labels[test_idx, "department_id"] <- -1
-graph <- graph %>%  set_vertex_attr("department", value = df_labels %>% select("department_id") %>% pull())
+V(graph)[df_labels %>% select("id") %>% pull()]$department <- df_labels %>% 
+  select("department_id") %>% 
+  pull()
 
 ```
 
@@ -33,6 +40,7 @@ graph_simplified <- delete.vertices(graph, isolated)
 ```
 
 ## Visualization
+### "Hairball" Plot
 As the graph is too big, we will be content with visualizing a random subgraph of it:
 
 ```{r}
@@ -51,22 +59,25 @@ plot(
 )
 ```
 
+### Hive Plots:
+```{r}
+hive = edge2HPD(
+  df_edges_list %>% mutate(weight = rep(1, gsize(graph)))
+)
+plotHive(hive)
+```
+
 
 ## Graph Statistics
 Now let us look at some statistics of the graphs:
-<br>
-1. *Diameter of the graph*: `r diameter(graph)`
-<br>
-2. *Maximum degree*: `r max(degree(graph, mode = "all"))`. Maximum out-degree: `r max(degree(graph, mode = "out"))`. Maximum in-degree: `r max(degree(graph, mode = "in"))`
-<br>
-3. *Average path length of the graph*: `r mean_distance(graph, directed = TRUE)`
-<br>
-4. *Density of graph*: `r edge_density(graph)`
-<br>
-5. *Global transitivity of the graph*: `r transitivity(graph)`
-<br>
-6. *Reciprocity* (percentage of edges that are symmetrical): `r reciprocity(graph)`
-<br>
+
+- *Diameter of the graph*: `r diameter(graph)`
+- *Maximum degree*: `r max(degree(graph, mode = "all"))`. Maximum out-degree: `r max(degree(graph, mode = "out"))`. Maximum in-degree: `r max(degree(graph, mode = "in"))`
+- *Average path length of the graph*: `r mean_distance(graph, directed = TRUE)`
+- *Density of graph*: `r edge_density(graph)`
+- *Global transitivity of the graph*: `r transitivity(graph)`
+- *Reciprocity* (percentage of edges that are symmetrical): `r reciprocity(graph)`
+
 The high reciprocity suggests that most correspondents are two ways: if a research sends an email to another, it is very likely that he/she will receive a reply.
 <br>
 Now, let us compare this statistics with that of random graphs with similar number of edges (and density). For instance, let us generate a thousand of such graphs and draw the histogram of their average path lengths:
@@ -103,11 +114,10 @@ The first one we will examine is the fast-greedy method:
 community_fg <- fastgreedy.community(as.undirected(graph))
 ```
 Some statistics of the result:
-<br>
-1. Number of communities: `r length(community_fg)`
-<br>
-2. Sizes of the communities: `r sizes(community_fg)`
-<br>
+
+- *Number of communities*: `r length(community_fg)`
+- *Sizes of the communities*: `r sizes(community_fg)`
+
 If we look at the breakdown of the values:
 ```{r}
 table(sizes(community_fg))
@@ -134,11 +144,10 @@ community_le <- leading.eigenvector.community(as.undirected(graph))
 V(graph)$membership_le <- membership(community_le)
 ```
 Some statistics of the result:
-<br>
-1. Number of communities: `r length(community_le)`
-<br>
-2. Sizes of the communities: `r sizes(community_le)`
-<br>
+
+- *Number of communities*: `r length(community_le)`
+- *Sizes of the communities*: `r sizes(community_le)`
+
 Again, looking at the breakdown of the values:
 ```{r}
 table(sizes(community_le))
@@ -164,12 +173,20 @@ V(graph)$membership_lv <- membership(community_lv)
 ```
 
 
+### Comparing results
+Let us now compare the results of the algorithms. The lower the score, the more similar the results:
+
+- *Fast Greedy v.s Leading Eigenvector*: `r compare(community_fg, community_le)`
+- *Fast Greedy v.s Random Walk*: `r compare(community_fg, community_rw)`
+- *Fast Greedy v.s Louvain*: `r compare(community_fg, community_lv)`
+
 ## Graphlet
 
 ## Homophily Analysis
 
 ## Extracting Vertices Feature
 Now let us extract the features of the vertices.
+
 ### Simple Features:
 We will extract the degree (first and second order) of each vertex, along with the number of triangles it belongs to:
 ```{r}
@@ -187,22 +204,25 @@ V(graph)$eigenCentrality <- eigen_centrality(graph, directed = TRUE, scale = TRU
 V(graph)$closeness <- closeness(graph)
 ```
 ### Link-Based Features:
+First, we compute the first and second order adjacency matrix, which will allow us to compute other link-based features:
 ```{r}
 adj_mat <- as_adjacency_matrix(graph)
 second_ord_adj_mat <- adj_mat %*% adj_mat
 second_ord_adj_mat <- (second_ord_adj_mat > 0) + 0
 diag(second_ord_adj_mat) <- 0
-
+```
+The first set of features we want to compute is the average degree, number of triangles, transitivity, and betweenness centrality of each node's first and second order neighborhood:
+```{r}
 V(graph)$avgDeg <- as.vector(adj_mat %*% V(graph)$degree) / V(graph)$degree
 V(graph)$avgTriag <- as.vector(adj_mat %*% V(graph)$triangles) / V(graph)$degree
 V(graph)$avgTransit <- as.vector(adj_mat %*% V(graph)$local_transitivity) / V(graph)$degree
 V(graph)$avgBetween <- as.vector(adj_mat %*% V(graph)$betweenness) / V(graph)$degree
+```
 
-
-
-
+The next set of features are pagerank features. We also compute the personalized version with respect to each of the community relations we have found in the previous section:
+```{r}
 V(graph)$pr <- page.rank(graph)$vector
-for (i in 0:41) {
+for (i in 1:42) {
   graph <- set_vertex_attr(graph, paste0("perpr_", i), value = page.rank(graph, personalized = V(graph)$department == i)$vector)
 }
 
@@ -223,12 +243,6 @@ for (i in 1:136) {
 for (i in 1:26) {
   graph <- set_vertex_attr(graph, paste0("perpr_lv", i), value = page.rank(graph, personalized = V(graph)$membership_lv == i)$vector)
 }
-
-
-
-
-
-
 ```
 
 
