@@ -14,12 +14,14 @@ class GraphConvNet(nn.Module):
         self.add_module(
             "main",
             nn.Sequential(
+                nn.Dropout(),
                 GraphConvolutionLayer(
                     in_features = in_features,
                     out_features = 256,
                     normed_laplacian = self._normed_laplacian,
                     loss = nn.ReLU
                 ),
+                nn.Dropout(),
                 GraphConvolutionLayer(
                     in_features = 256,
                     out_features = n_class,
@@ -35,7 +37,8 @@ class GraphConvNet(nn.Module):
 
     def fit(
             self, input, label,
-            n_train, n_epoch = 5000
+            indices_train, n_epoch = 5000,
+            verbose = True
     ):
         self.train()
 
@@ -45,10 +48,11 @@ class GraphConvNet(nn.Module):
 
 
         for e in range(n_epoch):
-            output = self.forward(input)[:n_train]
+            output = self.forward(input)[indices_train]
             loss = self._loss(output, label)
 
-            print("Epoch " + str(e) + " with loss " + str(loss.item()))
+            if verbose:
+                print("Epoch " + str(e) + " with loss " + str(loss.item()))
 
             optimizer.zero_grad()
             loss.backward()
@@ -60,6 +64,10 @@ class GraphConvNet(nn.Module):
         self.eval()
         op = self.forward(torch.from_numpy(input).float()).detach().numpy()
         return np.argmax(op, axis = -1)
+
+
+    def save_weight(self, PATH):
+        torch.save(self.state_dict(), PATH + "/model.pt")
 
 
 
