@@ -10,6 +10,6 @@ G = nx.convert_matrix.from_pandas_edgelist(
     target = "to"
 )
 
-node2vec = Node2Vec(G)
+node2vec = Node2Vec(G, dimensions = 64)
 model = node2vec.fit(window = 10, min_count = 1, batch_words = 4)
 model.wv.save_word2vec_format("./Data/embeddings.emb")
