@@ -50,7 +50,12 @@ features_test_pca = pca.transform(features_test)
 
 ## Use k-Fold CV to select model:
 kf = KFold(n_splits=10)
-models = [LogisticRegression(C = 0.5), SVC(C = 0.5), RandomForestClassifier(), MLPClassifier(max_iter=2000)]
+models = [
+    LogisticRegression(C = 0.5, multi_class = 'multinomial', solver = 'lbfgs', max_iter = 2000),
+    SVC(C = 0.5),
+    RandomForestClassifier(),
+    MLPClassifier(max_iter=2000)
+]
 accs = []
 for model in models:
     model_acc = []

@@ -16,7 +16,7 @@ df_test = pd.read_csv("./Data/test.csv").fillna(0)
 df_features = pd.concat((df_train, df_test))
 
 features = df_features.drop(["name", "department", "true_department"], axis = 1).values
-departments = (df_features[["true_department"]].values).reshape(-1)
+departments = (df_features[["true_department"]].values).reshape(-1) - 1
 n_test = df_test.shape[0]
 n_train = df_train.shape[0]
 
@@ -61,7 +61,7 @@ deg_tilde_inv_sqrt = np.diag(1.0 / np.sqrt(deg_tilde))
 normed_laplacian = deg_tilde_inv_sqrt * adj_tilde * deg_tilde_inv_sqrt
 
 model = GraphConvNet(in_features = features.shape[1], normed_laplacian = normed_laplacian, n_class = 42)
-model.fit(features, departments_train, n_train, n_epoch = 500)
+model.fit(features, departments_train, n_train, n_epoch = 50)
 
 prediction = model.predict(features)
 print(prediction.shape)
