@@ -89,7 +89,7 @@ normed_laplacian = deg_tilde_inv_sqrt * adj_tilde * deg_tilde_inv_sqrt
 # print(accs)
 
 model = GraphConvNet(in_features = features.shape[1], normed_laplacian = normed_laplacian, n_class = 42)
-model.fit(features, departments_train, indices_train, n_epoch = 10000)
+model.fit(features, departments_train, indices_train, n_epoch = 15000)
 #
 prediction = model.predict(features)
 print(prediction.shape)
